@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CVE Search</title>
+    <style>
+        /* General styles */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #1e1e1e; /* Dark background */
+            color: #e0e0e0; /* Light text for readability */
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 90%;
+            max-width: 600px;
+            margin: 100px auto;
+            background-color: #2b2b2b; /* Slightly lighter dark tone for container */
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+        h1 {
+            color: #ff5252; /* Bright red for heading */
+            border-bottom: 2px solid #ff5252; /* Red underline */
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin: 15px 0 5px;
+            font-size: 18px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #424242;
+            border-radius: 4px;
+            background-color: #333333;
+            color: #e0e0e0;
+        }
+        input[type="text"]:focus {
+            border-color: #42a5f5; /* Blue border on focus */
+            outline: none;
+        }
+        .button {
+            background-color: #42a5f5; /* Blue background */
+            color: #fff; /* White text */
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin-top: 20px;
+            cursor: pointer;
+            border-radius: 4px;
+            border: none;
+        }
+        .button:hover {
+            background-color: #ff5252; /* Hover effect in red */
+        }
+        .error {
+            color: #ff5252; /* Red text for error messages */
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CVE Search</h1>
+        <form method="post" action="/">
+            <label for="cve_id">Enter CVE ID:</label>
+            <input type="text" id="cve_id" name="cve_id" placeholder="e.g., CVE-2021-34527" required>
+            <button type="submit" class="button">Search</button>
+        </form>
+        {% if error %}
+        <p class="error">{{ error }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>
