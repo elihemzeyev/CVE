@@ -1,13 +1,15 @@
 import re
 import requests
+import threading
+from flask import Flask, render_template, request, send_file
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from flask import Flask, render_template, request
-import threading
-import webbrowser
+from fpdf import FPDF
+from docx import Document
+import os
 
 app = Flask(__name__)
 
@@ -16,6 +18,10 @@ chrome_options = webdriver.ChromeOptions()
 chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--headless")  # Enable headless mode
+
+# Directory to save the generated files
+DOWNLOAD_FOLDER = 'downloads'
+os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
 def validate_cve_id(cve_id):
     """Validate the format of the CVE ID."""
@@ -90,10 +96,11 @@ def collect_data(cve_id, report):
 
         # Extract valid reference links
         report["references"] = get_valid_references(driver)
-        # Open the top 3 reference links in the default web browser
+        # Use JavaScript to open the top 3 reference links in new tabs without focusing on them
         for link in report["references"][:3]:
-            webbrowser.open_new_tab(link)
+            driver.execute_script(f"window.open('{link}', '_blank');")
         driver.switch_to.window(driver.window_handles[0])  # Switch back to the original tab
+
         # Scrape Exploit DB for exploits
         exploitdb_url = f"https://www.exploit-db.com/search?cve={cve_id}"
         driver.get(exploitdb_url)
@@ -153,6 +160,73 @@ def start_data_collection(cve_id):
     thread.start()
     thread.join()  # Wait for the thread to finish
     return report
+
+def generate_pdf(report):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+
+    pdf.cell(200, 10, txt=f"CVE Report: {report['cve_id']}", ln=True, align='C')
+
+    pdf.cell(200, 10, txt=f"CVSS Score: {report['cvss_score']}", ln=True)
+    pdf.cell(200, 10, txt=f"CVSS Vector: {report['cvss_details']}", ln=True)
+    pdf.multi_cell(0, 10, txt=f"Description: {report['description']}")
+
+    pdf.cell(200, 10, txt="Affected Assets:", ln=True)
+    for asset in report['affected_assets']:
+        pdf.cell(200, 10, txt=f"Vendor: {asset['vendor']}, Product: {asset['product']}", ln=True)
+
+    pdf.cell(200, 10, txt="Exploits:", ln=True)
+    for exploit in report['exploits']:
+        pdf.cell(200, 10, txt=f"Title: {exploit['title']}, Link: {exploit['title_link']}, Download: {exploit['download_link']}", ln=True)
+
+    filename = os.path.join(DOWNLOAD_FOLDER, f"{report['cve_id']}.pdf")
+    pdf.output(filename)
+    return filename
+
+def generate_docx(report):
+    doc = Document()
+    doc.add_heading(f"CVE Report: {report['cve_id']}", 0)
+
+    doc.add_heading('CVSS Score', level=1)
+    doc.add_paragraph(f"CVSS Score: {report['cvss_score']}")
+    doc.add_paragraph(f"CVSS Vector: {report['cvss_details']}")
+
+    doc.add_heading('Description', level=1)
+    doc.add_paragraph(report['description'])
+
+    doc.add_heading('Affected Assets', level=1)
+    for asset in report['affected_assets']:
+        doc.add_paragraph(f"Vendor: {asset['vendor']}, Product: {asset['product']}")
+
+    doc.add_heading('Exploits', level=1)
+    for exploit in report['exploits']:
+        doc.add_paragraph(f"Title: {exploit['title']}, Link: {exploit['title_link']}, Download: {exploit['download_link']}")
+
+    filename = os.path.join(DOWNLOAD_FOLDER, f"{report['cve_id']}.docx")
+    doc.save(filename)
+    return filename
+
+def generate_html(report):
+    html_content = render_template('report.html', report=report)
+    filename = os.path.join(DOWNLOAD_FOLDER, f"{report['cve_id']}.html")
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write(html_content)
+    return filename
+
+@app.route('/download/<filetype>/<cve_id>')
+def download_file(filetype, cve_id):
+    report = start_data_collection(cve_id)  # Re-generate the report to get the latest data
+    if filetype == 'pdf':
+        filename = generate_pdf(report)
+    elif filetype == 'docx':
+        filename = generate_docx(report)
+    elif filetype == 'html':
+        filename = generate_html(report)
+    else:
+        return "Invalid file type requested.", 400
+
+    return send_file(filename, as_attachment=True)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():

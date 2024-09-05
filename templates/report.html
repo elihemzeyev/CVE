@@ -6,6 +6,27 @@
     <title>CVE Report</title>
     <style>
         /* General styles */
+        .button {
+            background-color: #42a5f5; /* Blue background */
+            color: #fff; /* White text */
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            border: none;
+        }
+
+        .button:hover {
+            background-color: #ff5252; /* Hover effect in red */
+        }
+
+        .download-buttons {
+            margin-top: 30px;
+        }
         body {
             font-family: 'Arial', sans-serif;
             background-color: #1e1e1e; /* Dark background */
@@ -202,7 +223,18 @@
             </table>
         </div>
 
+        <body>
+            <div class="container">
+                <!-- Your existing content... -->
         
+                <!-- Download buttons section -->
+                <div class="download-buttons">
+                    <a href="{{ url_for('download_file', filetype='pdf', cve_id=report.cve_id) }}" class="button">Download PDF</a>
+                    <a href="{{ url_for('download_file', filetype='docx', cve_id=report.cve_id) }}" class="button">Download DOCX</a>
+                    <a href="{{ url_for('download_file', filetype='html', cve_id=report.cve_id) }}" class="button">Download HTML</a>
+                </div>
+            </div>
+        </body>
     </div>
 </body>
 </html>
