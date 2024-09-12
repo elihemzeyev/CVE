@@ -1,0 +1,6 @@
+﻿Flask==3.0.3
+requests==2.31.0
+fpdf==1.7.2
+python-docx==0.8.11
+selenium==4.11.2
+webdriver-manager==4.0.0
