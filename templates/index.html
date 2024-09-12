@@ -35,8 +35,8 @@
             font-size: 18px;
         }
         input[type="text"] {
-            width: 100%;
-            padding: 10px;
+            width: 95%;
+            padding: 9px;
             border: 1px solid #424242;
             border-radius: 4px;
             background-color: #333333;
@@ -66,12 +66,48 @@
             color: #ff5252; /* Red text for error messages */
             margin-top: 20px;
         }
+
+        /* Spinner styles */
+        .spinner {
+            border: 8px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 8px solid #3498db;
+            width: 60px;
+            height: 60px;
+            animation: spin 2s linear infinite;
+            display: none; /* Hidden by default */
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 9998;
+            display: none; /* Hidden by default */
+        }
     </style>
 </head>
 <body>
+    <!-- Loading Spinner -->
+    <div class="loading-overlay"></div>
+    <div class="spinner"></div>
+
     <div class="container">
         <h1>CVE Search</h1>
-        <form method="post" action="/">
+        <form id="cve-form" method="post" action="/">
             <label for="cve_id">Enter CVE ID:</label>
             <input type="text" id="cve_id" name="cve_id" placeholder="e.g., CVE-2021-34527" required>
             <button type="submit" class="button">Search</button>
@@ -80,5 +116,13 @@
         <p class="error">{{ error }}</p>
         {% endif %}
     </div>
+
+    <script>
+        document.getElementById('cve-form').addEventListener('submit', function () {
+            // Show the loading spinner
+            document.querySelector('.spinner').style.display = 'block';
+            document.querySelector('.loading-overlay').style.display = 'block';
+        });
+    </script>
 </body>
 </html>

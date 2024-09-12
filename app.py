@@ -10,7 +10,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from fpdf import FPDF
 from docx import Document
 import os
-
+import webbrowser
+# Ali Hamzayev was responsible for the end-to-end technical implementation of the project, ensuring that all system components were designed and developed to meet both functional and performance requirements.
 app = Flask(__name__)
 
 # Set up Selenium options for headless mode
@@ -23,10 +24,13 @@ chrome_options.add_argument("--headless")  # Enable headless mode
 DOWNLOAD_FOLDER = 'downloads'
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
+#Farida Dashdamirova wrote cve validation function which one of the important parts in project.
 def validate_cve_id(cve_id):
     """Validate the format of the CVE ID."""
     pattern = r"CVE-\d{4}-\d{4,7}"
     return re.match(pattern, cve_id) is not None
+
+#Aydin Khalilov fix MITRE api which we get CVE status also Vendor and Products.
 
 def check_cve_status(cve_id):
     """Check if the CVE ID is published, reserved, or rejected."""
@@ -98,15 +102,14 @@ def collect_data(cve_id, report):
         report["references"] = get_valid_references(driver)
         # Use JavaScript to open the top 3 reference links in new tabs without focusing on them
         for link in report["references"][:3]:
-            driver.execute_script(f"window.open('{link}', '_blank');")
-        driver.switch_to.window(driver.window_handles[0])  # Switch back to the original tab
-
-        # Scrape Exploit DB for exploits
+            webbrowser.open_new_tab(link)
+        
+        # Scrape Exploit DB for exploits, including validation column
         exploitdb_url = f"https://www.exploit-db.com/search?cve={cve_id}"
         driver.get(exploitdb_url)
         try:
             WebDriverWait(driver, 10).until(
-                EC.presence_of_all_elements_located((By.XPATH, "//*[@id='exploits-table']/tbody/tr/td[5]"))
+                EC.presence_of_all_elements_located((By.XPATH, "//*[@id='exploits-table']/tbody/tr"))
             )
             exploit_rows = driver.find_elements(By.XPATH, "//*[@id='exploits-table']/tbody/tr")
             for row in exploit_rows:
@@ -115,7 +118,17 @@ def collect_data(cve_id, report):
                 title_link_element = title_element.find_element(By.TAG_NAME, "a")
                 title_link = title_link_element.get_attribute("href")
                 download_link = title_link.replace("/exploits/", "/download/")  # Adjusted link replacement
-                report["exploits"].append({"title": title_text, "title_link": title_link, "download_link": download_link})
+
+                # Get validation status (e.g., green checkmark)
+                validation_icon = row.find_element(By.XPATH, "./td[4]/i")
+                validation = "Valid" if "mdi-check" in validation_icon.get_attribute("class") else "Invalid"
+
+                report["exploits"].append({
+                    "title": title_text, 
+                    "title_link": title_link, 
+                    "download_link": download_link,
+                    "validation": validation
+                })
         except Exception as e:
             print(f"No exploits found on Exploit DB for {cve_id}: {e}")
 
@@ -161,6 +174,8 @@ def start_data_collection(cve_id):
     thread.join()  # Wait for the thread to finish
     return report
 
+#Ulvi Rzayev wrote generate_pdf function which we use to download reports in PDF format.
+
 def generate_pdf(report):
     pdf = FPDF()
     pdf.add_page()
@@ -177,8 +192,26 @@ def generate_pdf(report):
         pdf.cell(200, 10, txt=f"Vendor: {asset['vendor']}, Product: {asset['product']}", ln=True)
 
     pdf.cell(200, 10, txt="Exploits:", ln=True)
+
     for exploit in report['exploits']:
-        pdf.cell(200, 10, txt=f"Title: {exploit['title']}, Link: {exploit['title_link']}, Download: {exploit['download_link']}", ln=True)
+        # Title
+        pdf.set_font("Arial", style='B', size=12)  # Bold for titles
+        pdf.multi_cell(0, 10, txt=f"Title: {exploit['title']}")
+        
+        # Reset font for the rest of the details
+        pdf.set_font("Arial", size=12)
+        
+        # Link
+        pdf.multi_cell(0, 10, txt=f"Link: {exploit['title_link']}")
+        
+        # Download link
+        pdf.multi_cell(0, 10, txt=f"Download: {exploit['download_link']}")
+        
+        # Validation
+        pdf.multi_cell(0, 10, txt=f"Validation: {exploit['validation']}")
+        
+        # Add some spacing between exploits
+        pdf.ln(5)
 
     filename = os.path.join(DOWNLOAD_FOLDER, f"{report['cve_id']}.pdf")
     pdf.output(filename)
@@ -201,7 +234,7 @@ def generate_docx(report):
 
     doc.add_heading('Exploits', level=1)
     for exploit in report['exploits']:
-        doc.add_paragraph(f"Title: {exploit['title']}, Link: {exploit['title_link']}, Download: {exploit['download_link']}")
+        doc.add_paragraph(f"Title: {exploit['title']}, Link: {exploit['title_link']}, Download: {exploit['download_link']}, Validation: {exploit['validation']}")
 
     filename = os.path.join(DOWNLOAD_FOLDER, f"{report['cve_id']}.docx")
     doc.save(filename)
@@ -213,20 +246,6 @@ def generate_html(report):
     with open(filename, 'w', encoding='utf-8') as f:
         f.write(html_content)
     return filename
-
-@app.route('/download/<filetype>/<cve_id>')
-def download_file(filetype, cve_id):
-    report = start_data_collection(cve_id)  # Re-generate the report to get the latest data
-    if filetype == 'pdf':
-        filename = generate_pdf(report)
-    elif filetype == 'docx':
-        filename = generate_docx(report)
-    elif filetype == 'html':
-        filename = generate_html(report)
-    else:
-        return "Invalid file type requested.", 400
-
-    return send_file(filename, as_attachment=True)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -242,14 +261,48 @@ def index():
             elif status != 'PUBLISHED':
                 warning = "The CVE ID is not in a published state. Proceed with caution."
                 report = start_data_collection(cve_id)
+                
+                # Save the generated files (PDF, DOCX, HTML) once during form submission
+                generate_pdf(report)   # PDF file
+                generate_docx(report)  # DOCX file
+                generate_html(report)  # HTML file
+                
                 return render_template('report.html', report=report, warning=warning, status=status)
             
             report = start_data_collection(cve_id)
+            
+            # Save the generated files (PDF, DOCX, HTML) once during form submission
+            generate_pdf(report)   # PDF file
+            generate_docx(report)  # DOCX file
+            generate_html(report)  # HTML file
+            
             return render_template('report.html', report=report, status=status)
         else:
             return render_template('index.html', error=f"Could not determine the status of the CVE ID {cve_id}.")
     
     return render_template('index.html')
+
+
+@app.route('/download/<filetype>/<cve_id>')
+def download_file(filetype, cve_id):
+    # Serve the already generated file based on the filetype
+    if filetype == 'pdf':
+        filename = os.path.join(DOWNLOAD_FOLDER, f"{cve_id}.pdf")
+    elif filetype == 'docx':
+        filename = os.path.join(DOWNLOAD_FOLDER, f"{cve_id}.docx")
+    elif filetype == 'html':
+        filename = os.path.join(DOWNLOAD_FOLDER, f"{cve_id}.html")
+    else:
+        return "Invalid file type requested.", 400
+
+    # Ensure the file exists before sending
+    if os.path.exists(filename):
+        return send_file(filename, as_attachment=True)
+    else:
+        return "File not found.", 404
+
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)

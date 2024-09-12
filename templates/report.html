@@ -6,6 +6,31 @@
     <title>CVE Report</title>
     <style>
         /* General styles */
+        .alert.alert-danger {
+            background-color: rgba(253, 66, 124, 0.1);
+        }
+
+        .alert.alert-danger i {
+            color: #fd427c;
+        }
+
+        .alert.alert-danger .alert-link {
+            color: #fd427c;
+        }
+
+        .alert.alert-danger .alert-link::before {
+            background-color: #fd427c;
+        }
+
+        .alert.alert-danger .close {
+            border-color: #fd427c;
+            color: #fd427c;
+        }
+
+        .alert.alert-danger .close:hover {
+            background-color: #fd427c;
+        }
+
         .button {
             background-color: #42a5f5; /* Blue background */
             color: #fff; /* White text */
@@ -24,9 +49,17 @@
             background-color: #ff5252; /* Hover effect in red */
         }
 
+        .home-button {
+            background-color: #1e88e5;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+
         .download-buttons {
             margin-top: 30px;
         }
+
         body {
             font-family: 'Arial', sans-serif;
             background-color: #1e1e1e; /* Dark background */
@@ -34,6 +67,7 @@
             margin: 0;
             padding: 0;
         }
+
         .container {
             width: 90%;
             margin: 20px auto;
@@ -41,22 +75,28 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            position: relative; /* Relative positioning for Home button */
         }
+
         h1, h2 {
             color: #ff5252; /* Bright red for headings */
             border-bottom: 2px solid #ff5252; /* Red underline */
             padding-bottom: 10px;
         }
+
         .section {
             margin-bottom: 30px;
         }
+
         p, a, li {
             color: #e0e0e0; /* Light text color */
         }
+
         a {
             color: #42a5f5; /* Blue color for links */
             text-decoration: none;
         }
+
         a:hover {
             color: #ff5252; /* Hover effect in red */
         }
@@ -67,61 +107,83 @@
             border-collapse: collapse;
             margin-top: 10px;
         }
+
         .table th, .table td {
             border: 1px solid #424242; /* Darker borders */
             padding: 12px;
             text-align: left;
         }
+
         .table th {
             background-color: #424242; /* Dark grey for header */
             color: #ff5252; /* Red text for header */
             font-weight: bold;
         }
+
         .table tr:nth-child(even) {
             background-color: #333333; /* Alternate row background color */
         }
+
         .table tr:hover {
             background-color: #424242; /* Hover effect for rows */
         }
 
-        /* Button styles */
-        .button {
-            background-color: #42a5f5; /* Blue background */
-            color: #fff; /* White text */
-            padding: 10px 20px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 4px;
-            border: none;
-        }
-        .button:hover {
-            background-color: #ff5252; /* Hover effect in red */
+        /* Spinner styles */
+        .spinner {
+            border: 8px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 8px solid #3498db;
+            width: 60px;
+            height: 60px;
+            animation: spin 2s linear infinite;
+            display: none; /* Hidden by default */
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
         }
 
-        /* Visualization styles */
-        .visualization {
-            background-color: #333333; /* Background for visualization */
-            border-radius: 8px;
-            padding: 20px;
-            margin-top: 20px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 9998;
+            display: none; /* Hidden by default */
         }
 
     </style>
 </head>
 <body>
+    <!-- Loading Spinner -->
+    <div class="loading-overlay"></div>
+    <div class="spinner"></div>
+
+    <!-- Hidden iframe to trigger download -->
+    <iframe id="download-frame" style="display:none;"></iframe>
+
     <div class="container">
+        <!-- Home button -->
+        <a href="/" class="button home-button">Home</a>
+
         <h1>{{ report.cve_id }}</h1>
 
         <!-- CVSS Score and Vector Section -->
         <div class="section">
             <h2>CVSS Score and Vector</h2>
-            <p><strong>CVSS Score:</strong> {{ report.cvss_score }}</p>
-            <p><strong>CVSS Vector:</strong> {{ report.cvss_details }}</p>
+            <div class="alert alert-danger" role="alert">
+                <p><strong>CVSS Score:</strong><a class="alert-link" href="#"> {{ report.cvss_score }}</a> </p>
+            </div>
+           
+            <p><strong>CVSS Vector:</strong> <a class="alert-link" href="#"> {{ report.cvss_details }}</a> </p>
         </div>
 
         <!-- Description Section -->
@@ -157,7 +219,7 @@
             </table>
         </div>
 
-        <!-- Exploits Section -->
+        <!-- Exploits Section with Validation -->
         <div class="section">
             <h2>Exploits</h2>
             <table class="table">
@@ -165,6 +227,7 @@
                     <tr>
                         <th>Title</th>
                         <th>Title Link</th>
+                        <th>Validation</th>
                         <th>Download Link</th>
                     </tr>
                 </thead>
@@ -174,12 +237,18 @@
                             <tr>
                                 <td>{{ exploit.title }}</td>
                                 <td><a href="{{ exploit.title_link }}" target="_blank">{{ exploit.title_link }}</a></td>
+                                
+                                <!-- Conditional styling for Validation -->
+                                <td style="color: {% if exploit.validation == 'Valid' %}green{% else %}red{% endif %};">
+                                    {{ exploit.validation }}
+                                </td>
+                                
                                 <td><a href="{{ exploit.download_link }}" target="_blank">Download</a></td>
                             </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="3">No exploits found.</td>
+                            <td colspan="4">No exploits found.</td>
                         </tr>
                     {% endif %}
                 </tbody>
@@ -223,18 +292,12 @@
             </table>
         </div>
 
-        <body>
-            <div class="container">
-                <!-- Your existing content... -->
-        
-                <!-- Download buttons section -->
-                <div class="download-buttons">
-                    <a href="{{ url_for('download_file', filetype='pdf', cve_id=report.cve_id) }}" class="button">Download PDF</a>
-                    <a href="{{ url_for('download_file', filetype='docx', cve_id=report.cve_id) }}" class="button">Download DOCX</a>
-                    <a href="{{ url_for('download_file', filetype='html', cve_id=report.cve_id) }}" class="button">Download HTML</a>
-                </div>
-            </div>
-        </body>
+        <!-- Download buttons section -->
+        <div class="download-buttons">
+            <a href="{{ url_for('download_file', filetype='pdf', cve_id=report.cve_id) }}" class="button download-button">Download PDF</a>
+            <a href="{{ url_for('download_file', filetype='docx', cve_id=report.cve_id) }}" class="button download-button">Download DOCX</a>
+            <a href="{{ url_for('download_file', filetype='html', cve_id=report.cve_id) }}" class="button download-button">Download HTML</a>
+        </div>
     </div>
 </body>
 </html>
