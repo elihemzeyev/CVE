@@ -11,7 +11,7 @@ from fpdf import FPDF
 from docx import Document
 import os
 import webbrowser
-# Ali Hamzayev was responsible for the end-to-end technical implementation of the project, ensuring that all system components were designed and developed to meet both functional and performance requirements.
+
 app = Flask(__name__)
 
 # Set up Selenium options for headless mode
@@ -24,13 +24,13 @@ chrome_options.add_argument("--headless")  # Enable headless mode
 DOWNLOAD_FOLDER = 'downloads'
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
 
-#Farida Dashdamirova wrote cve validation function which one of the important parts in project.
+
 def validate_cve_id(cve_id):
     """Validate the format of the CVE ID."""
     pattern = r"CVE-\d{4}-\d{4,7}"
     return re.match(pattern, cve_id) is not None
 
-#Aydin Khalilov fix MITRE api which we get CVE status also Vendor and Products.
+
 
 def check_cve_status(cve_id):
     """Check if the CVE ID is published, reserved, or rejected."""
@@ -174,7 +174,7 @@ def start_data_collection(cve_id):
     thread.join()  # Wait for the thread to finish
     return report
 
-#Ulvi Rzayev wrote generate_pdf function which we use to download reports in PDF format.
+
 
 def generate_pdf(report):
     pdf = FPDF()
