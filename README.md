@@ -43,9 +43,3 @@ The **CVE Report Generator** is a web application designed to fetch and generate
 ## Endpoints
 - **Home:** `/` (GET, POST) - Submits a CVE ID and displays the report.
 - **Download:** `/download/<filetype>/<cve_id>` (GET) - Downloads the report in the specified file type (pdf, docx, or html).
-
-## Group Members
-- **Aydin:** Researched project design, created a plan with Farida, sourced API keys, and wrote the README.md file.
-- **Ali:** As the main developer, implemented the program.
-- **Farida:** Created the project presentation, contributed to research, and assisted in planning with Aydin.
-- **Ulvi:** Focused on testing, determining CVE ID status (published, reserved, or rejected), tested the project, and made critical contributions.
